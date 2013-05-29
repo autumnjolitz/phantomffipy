@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-from distutils.core import setup, Command
-import distutils.command
+from distutils.core import setup
+import distutils.command.build
+import distutils.command.clean
 from distutils import log
 from distutils.spawn import find_executable
 import subprocess
@@ -153,25 +154,23 @@ def compile_phantompy(opts):
         raise Exception("Make error!")
 
 
-
 def get_paths():
     return {'git': find_executable('git'), 'cmake': get_cmake_path(),
             'library': os.path.join(
-                SUBPROCESS_KWARGS['cwd'], 'build', 'lib', 'phantomffipy', '_phantompy.so'),
+                SUBPROCESS_KWARGS['cwd'], 'build', 'lib',
+                'phantomffipy', '_phantompy.so'),
             'phantompy_src': os.path.join(
                 SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')}
 
-import distutils.command.build
-import distutils.command.clean
 
-class builder(distutils.command.build.build):
+class build(distutils.command.build.build):
     def run(self):
         result = distutils.command.build.build.run(self)
         print("building _phantompy.so")
         opts = get_paths()
         compile_phantompy(opts)
         for fileish in glob.glob(os.path.join(
-            opts['phantompy_src'], 'build', 'libphantompy*')):
+                opts['phantompy_src'], 'build', 'libphantompy*')):
             if os.path.isfile(fileish) and not os.path.islink(fileish):
                 print("installing {0} -> {1}".format(fileish, opts['library']))
                 shutil.move(fileish, opts['library'])
@@ -183,7 +182,8 @@ class builder(distutils.command.build.build):
 
 class clean(distutils.command.clean.clean):
     def run(self):
-        phantompy_dir = os.path.join(SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')
+        phantompy_dir = os.path.join(
+            SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')
         if os.path.exists(phantompy_dir):
             shutil.rmtree(phantompy_dir)
         return distutils.command.clean.clean.run(self)
@@ -197,7 +197,7 @@ setup(name='PhantomFFIPy',
       author_email='ben.jolitz@gmail.com',
       url='https://github.com/benjolitz/phantomffipy',
       cmdclass={
-          'build': builder,
+          'build': build,
           'clean': clean
       },
       packages=['phantomffipy'],
