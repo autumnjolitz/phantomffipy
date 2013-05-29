@@ -4,8 +4,16 @@ from distutils.core import setup
 from distutils import log
 from distutils.spawn import find_executable
 import subprocess
+import shutil
 import shlex
 import os.path
+import glob
+from urllib import urlopen
+import zipfile
+try:
+    import cStringIO as StringIO
+except ImportError:
+    import StringIO
 
 CMAKE_NOT_INSTALLED = "cmake not found in PATH!"
 FAILURE_IN_COMPILING_PHANTOMPY = "failed to compile phantompy!"
@@ -21,7 +29,7 @@ SUBPROCESS_ERROR = "subprocess.Popen threw an exception! " + \
 PHANTOMPY_REPO = "git://github.com/niwibe/phantompy.git"
 PHANTOMPY_REPO_ZIP = "https://github.com/niwibe/phantompy/archive/master.zip"
 CLONE_REPO = "{git} clone {repo} {path}"
-PHANTOMPY_SRC_DIR = "src/phantompy"
+PHANTOMPY_SRC_DIR = os.path.join("src", "phantompy")
 UPDATE_LOCAL_COPY = "{git} pull origin master"
 SUBPROCESS_KWARGS = {
     'stdout': subprocess.PIPE,
@@ -73,6 +81,46 @@ def download_git(opts):
 
 
 def download_url(opts):
+    src_dir = os.path.join(SUBPROCESS_KWARGS['cwd'], 'src')
+    dest_dir = os.path.join(src_dir, 'phantompy')
+    zipfilename = os.path.join(src_dir, 'phantompy-master.zip')
+    for downloader in ('wget', 'fetch', 'curl',):
+        if find_executable(downloader):
+            break
+    else:
+        downloader = None
+        buf = StringIO.StringIO()
+        try:
+            data = urlopen(PHANTOMPY_REPO_ZIP)
+        except:
+            raise Exception(UNABLE_TO_GET_PHANTOMPY_SOURCE)
+        else:
+            buf.write(data.read())
+            data.close()
+            buf.seek(0)
+        if downloader:
+            try:
+                subprocess.call(
+                    shlex.split("{0} {1}".format(
+                        downloader, PHANTOMPY_REPO_ZIP)),
+                    cwd=src_dir)
+            except OSError:
+                log.debug("Failed Command:\n{0} {1}".format(
+                    downloader, PHANTOMPY_REPO_ZIP))
+                return None
+
+        archive = zipfile.ZipFile(
+            buf or zipfilename)
+        archive.extractall(
+            path=os.path.join(SUBPROCESS_KWARGS['cwd'], 'src'))
+        if buf:
+            os.rename(
+                os.path.join(
+                    SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy-master'),
+                dest_dir)
+        else:
+            os.remove(zipfilename)
+        return dest_dir
     return None
 
 
@@ -93,12 +141,36 @@ def get_cmake_path():
     return path
 
 
-def compile_phantompy():
-    pass
+def compile_phantompy(opts):
+    if not os.path.exists(opts['phantompy_src']):
+        opts['phantompy_src'] = download_phantompy_source
+    retval = subprocess.call(shlex.split('cmake ..'),
+                             cwd=os.path.join(opts['phantompy_src'], 'build'))
+    if retval:
+        raise Exception("CMake Error!")
+    retval = subprocess.call(shlex.split('make'),
+                             cwd=os.path.join(opts['phantompy_src'], 'build'))
+    if retval:
+        raise Exception("Make error!")
+    for fileish in glob.glob(os.path.join(
+            opts['phantompy_src'], 'build', 'libphantompy*')):
+        if os.path.isfile(fileish) and not os.path.islink(fileish):
+            shutil.move(fileish, opts['library'])
+            break
 
 
-def capabilities():
-    return {'git': find_executable('git'), 'cmake': get_cmake_path()}
+def get_paths():
+    return {'git': find_executable('git'), 'cmake': get_cmake_path(),
+            'library': os.path.join(
+                SUBPROCESS_KWARGS['cwd'], 'phantomffipy', '_phantompy.so'),
+            'phantompy_src': os.path.join(
+                SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')}
+
+
+def build(*args, **kwargs):
+    opts = get_paths()
+    if not os.path.exists(opts['library']):
+        compile_phantompy(opts)
 
 setup(name='PhantomFFIPy',
       version='0.0',
@@ -107,4 +179,7 @@ setup(name='PhantomFFIPy',
       requires=['cffi'],
       author_email='ben.jolitz@gmail.com',
       url='https://github.com/benjolitz/phantomffipy',
+      cmdclass={
+          'build': build
+      },
       packages=['phantomffipy'])
