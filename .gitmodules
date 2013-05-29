@@ -1,0 +1,3 @@
+[submodule "phantomffipy/phantompy"]
+	path = phantomffipy/phantompy
+	url = git@github.com:benjolitz/phantompy.git
