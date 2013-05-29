@@ -1,6 +1,6 @@
 #!/usr/bin/env python
-
-from distutils.core import setup
+from distutils.core import setup, Command
+import distutils.command
 from distutils import log
 from distutils.spawn import find_executable
 import subprocess
@@ -41,7 +41,7 @@ SUBPROCESS_KWARGS = {
 def download_git(opts):
     if opts['git']:
         try:
-            subprocess.call([opts['git']])
+            stdout, stderr = subprocess.Popen([opts['git']], **SUBPROCESS_KWARGS).communicate()
         except OSError:
             log.debug("{0} not a valid command!".format(opts['git']))
             return None
@@ -113,12 +113,11 @@ def download_url(opts):
             buf or zipfilename)
         archive.extractall(
             path=os.path.join(SUBPROCESS_KWARGS['cwd'], 'src'))
-        if buf:
-            os.rename(
-                os.path.join(
-                    SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy-master'),
-                dest_dir)
-        else:
+        os.rename(
+            os.path.join(
+                SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy-master'),
+            dest_dir)
+        if not buf:
             os.remove(zipfilename)
         return dest_dir
     return None
@@ -143,7 +142,7 @@ def get_cmake_path():
 
 def compile_phantompy(opts):
     if not os.path.exists(opts['phantompy_src']):
-        opts['phantompy_src'] = download_phantompy_source
+        opts['phantompy_src'] = download_phantompy_source(opts)
     retval = subprocess.call(shlex.split('cmake ..'),
                              cwd=os.path.join(opts['phantompy_src'], 'build'))
     if retval:
@@ -152,25 +151,43 @@ def compile_phantompy(opts):
                              cwd=os.path.join(opts['phantompy_src'], 'build'))
     if retval:
         raise Exception("Make error!")
-    for fileish in glob.glob(os.path.join(
-            opts['phantompy_src'], 'build', 'libphantompy*')):
-        if os.path.isfile(fileish) and not os.path.islink(fileish):
-            shutil.move(fileish, opts['library'])
-            break
+
 
 
 def get_paths():
     return {'git': find_executable('git'), 'cmake': get_cmake_path(),
             'library': os.path.join(
-                SUBPROCESS_KWARGS['cwd'], 'phantomffipy', '_phantompy.so'),
+                SUBPROCESS_KWARGS['cwd'], 'build', 'lib', 'phantomffipy', '_phantompy.so'),
             'phantompy_src': os.path.join(
                 SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')}
 
+import distutils.command.build
+import distutils.command.clean
 
-def build(*args, **kwargs):
-    opts = get_paths()
-    if not os.path.exists(opts['library']):
+class builder(distutils.command.build.build):
+    def run(self):
+        result = distutils.command.build.build.run(self)
+        print("building _phantompy.so")
+        opts = get_paths()
         compile_phantompy(opts)
+        for fileish in glob.glob(os.path.join(
+            opts['phantompy_src'], 'build', 'libphantompy*')):
+            if os.path.isfile(fileish) and not os.path.islink(fileish):
+                print("installing {0} -> {1}".format(fileish, opts['library']))
+                shutil.move(fileish, opts['library'])
+                break
+        else:
+            raise Exception("Library not found!")
+        return result
+
+
+class clean(distutils.command.clean.clean):
+    def run(self):
+        phantompy_dir = os.path.join(SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')
+        if os.path.exists(phantompy_dir):
+            shutil.rmtree(phantompy_dir)
+        return distutils.command.clean.clean.run(self)
+
 
 setup(name='PhantomFFIPy',
       version='0.0',
@@ -180,6 +197,8 @@ setup(name='PhantomFFIPy',
       author_email='ben.jolitz@gmail.com',
       url='https://github.com/benjolitz/phantomffipy',
       cmdclass={
-          'build': build
+          'build': builder,
+          'clean': clean
       },
-      packages=['phantomffipy'])
+      packages=['phantomffipy'],
+      )
