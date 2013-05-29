@@ -4,6 +4,8 @@
 *.so
 
 # Packages
+src/
+!src/.gitkeep
 *.egg
 *.egg-info
 dist
