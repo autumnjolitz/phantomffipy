@@ -156,9 +156,9 @@ def compile_phantompy(opts):
 
 def get_paths():
     return {'git': find_executable('git'), 'cmake': get_cmake_path(),
-            'library': os.path.join(
+            'new_module_dir': os.path.join(
                 SUBPROCESS_KWARGS['cwd'], 'build', 'lib',
-                'phantomffipy', '_phantompy.so'),
+                'phantomffipy'),
             'phantompy_src': os.path.join(
                 SUBPROCESS_KWARGS['cwd'], 'src', 'phantompy')}
 
@@ -172,11 +172,18 @@ class build(distutils.command.build.build):
         for fileish in glob.glob(os.path.join(
                 opts['phantompy_src'], 'build', 'libphantompy*')):
             if os.path.isfile(fileish) and not os.path.islink(fileish):
-                print("installing {0} -> {1}".format(fileish, opts['library']))
-                shutil.move(fileish, opts['library'])
+                print("installing {0} -> {1}".format(
+                    fileish, os.path.join(opts['new_module_dir'],
+                                          '_phantompy.so')))
+                shutil.move(fileish, os.path.join(
+                    opts['new_module_dir'], '_phantompy.so'))
                 break
         else:
             raise Exception("Library not found!")
+        headers = (os.path.join(opts['phantompy_src'], 'lib', 'phantompy.hpp'),
+                   os.path.join(opts['new_module_dir'], 'phantompy.hpp'),)
+        print("installing {0} -> {1}".format(*headers))
+        shutil.copy(*headers)
         return result
 
 
