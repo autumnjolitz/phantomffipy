@@ -9,6 +9,7 @@ class PageDict(OrderedDict):
 
     def update(self, iterable=None):
         '''TODO -- consider case of changing a setting while inited'''
+        print "{0} os ".format(self.page._page)
         if self.callback:
             self.callback(self.page, list(iterable or self.itervalues()))
         if iterable:

@@ -17,7 +17,7 @@ class Context(object):
         self._config_proxy = None
 
     def __call__(self, methodname, *args, **kwargs):
-        getattr(self._library, methodname)(*args, **kwargs)
+        return getattr(self._library, methodname)(*args, **kwargs)
 
     def initialize(self):
         if self.state == self.UNINITIALIZED:
