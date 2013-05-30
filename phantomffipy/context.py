@@ -11,10 +11,13 @@ class Context(object):
 
     def __init__(self, ffi, library):
         self._context = None
-        self._ffi = ffi
+        self.ffi = ffi
         self._library = library
         self.state = self.UNINITIALIZED
         self._config_proxy = None
+
+    def __call__(self, methodname, *args, **kwargs):
+        getattr(self._library, methodname)(*args, **kwargs)
 
     def initialize(self):
         if self.state == self.UNINITIALIZED:
@@ -53,7 +56,7 @@ class Context(object):
     def get_all_cookies(self):
         cookies_json = None
         if self.state & self.INITIALIZED:
-            cookies_json = self._ffi.string(
+            cookies_json = self.ffi.string(
                 self._library.ph_context_get_all_cookies())
             cookies_json = json.loads(cookies_json)
         return cookies_json

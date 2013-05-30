@@ -170,7 +170,7 @@ class build(distutils.command.build.build):
         opts = get_paths()
         compile_phantompy(opts)
         for fileish in glob.glob(os.path.join(
-                opts['phantompy_src'], 'build', 'libphantompy*')):
+                opts['phantompy_src'], 'build', '_phantompy*.so*')):
             if os.path.isfile(fileish) and not os.path.islink(fileish):
                 print("installing {0} -> {1}".format(
                     fileish, os.path.join(opts['new_module_dir'],

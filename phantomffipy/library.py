@@ -38,7 +38,7 @@ def acquire_library():
     return ffi, ffi.dlopen(
         os.path.join(
             os.path.dirname(
-                os.path.abspath(__file__)), 'libphantompy'))
+                os.path.abspath(__file__)), '_phantompy.so'))
 
 if __name__ == "__main__":
     import doctest
