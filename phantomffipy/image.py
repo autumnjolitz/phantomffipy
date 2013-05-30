@@ -18,8 +18,8 @@ class Image(object):
         return self._blob
 
     def save(self, path):
-        if os.path.isdir(os.path.dirname(path)):
-            with open(path, 'rb') as fh:
+        if os.path.isdir(os.path.dirname(os.path.abspath(path))):
+            with open(path, 'wb') as fh:
                 fh.write(self.blob)
 
     def __repr__(self):

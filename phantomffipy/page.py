@@ -50,7 +50,7 @@ class Page(object):
                 format = format.encode('utf-8')
             return Image(
                 self._context('ph_frame_capture_image',
-                              self._main_frame, format, quality))
+                              self._main_frame, format, quality), self._context)
         return None
 
     def open(self, url):
