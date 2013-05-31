@@ -31,15 +31,16 @@ class Page(object):
     @property
     def source(self):
         if self.state & self.PAGE_LOAD_COMPLETE:
-            return self._context.ffi.string(self._context('ph_frame_to_html', self._main_frame))
+            return self._context.ffi.string(
+                self._context('ph_frame_to_html', self._main_frame))
         return None
 
     def evaluate(self, javascript):
         if self.state & self.PAGE_LOAD_COMPLETE:
             if isinstance(javascript, unicode):
                 javascript = javascript.encode('utf-8')
-            return self._context(
-                'ph_frame_evaluate_javascript', self._main_frame, javascript)
+            return self._context.ffi.string(self._context(
+                'ph_frame_evaluate_javascript', self._main_frame, javascript))
         return None
 
     def render(self, format=None, quality=-1):
@@ -50,7 +51,8 @@ class Page(object):
                 format = format.encode('utf-8')
             return Image(
                 self._context('ph_frame_capture_image',
-                              self._main_frame, format, quality), self._context)
+                              self._main_frame, format, quality),
+                self._context)
         return None
 
     def open(self, url):
@@ -79,4 +81,3 @@ class Page(object):
         self._page = None
         self._main_frame = None
         self.state = self.PAGE_UNLOADED
-

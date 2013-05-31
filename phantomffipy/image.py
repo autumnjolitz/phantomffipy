@@ -10,11 +10,17 @@ class Image(object):
     @property
     def blob(self):
         if not self._blob:
-            self.blob = self._context(
-                'ph_image_get_bytes', self._image_pointer,
-                self._context('ph_image_get_size', self._image_pointer))
+            size = self._context('ph_image_get_size', self._image_pointer)
+            buf = self._context.ffi.new('char (*)[{0}]'.format(size))
+            self._context(
+                'ph_image_get_bytes', self._image_pointer, buf,
+                size)
             self._context('ph_image_free', self._image_pointer)
             self._image_pointer = None
+            self._blob = ''
+            for index in xrange(0, size):
+                self._blob += buf[0][index]
+
         return self._blob
 
     def save(self, path):
