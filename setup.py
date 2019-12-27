@@ -199,10 +199,10 @@ class clean(distutils.command.clean.clean):
 setup(name='PhantomFFIPy',
       version='0.0',
       description='FFI interface for phantompy',
-      author='Ben Jolitz',
+      author='Autumn Jolitz',
       requires=['cffi'],
-      author_email='ben.jolitz@gmail.com',
-      url='https://github.com/benjolitz/phantomffipy',
+      author_email='autumn.jolitz@gmail.com',
+      url='https://github.com/autumnjolitz/phantomffipy',
       cmdclass={
           'build': build,
           'clean': clean
